@@ -44,12 +44,12 @@ app.post('/move', (request, response) => {
 
     const data = Object.assign({}, request.body, buildWorld(request.body))
     data.finder = new PF.AStarFinder({
-      allowDiagonal: true
+      allowDiagonal: false
     })
     data.pathWorld = buildPathfindingWorld(data.world)
     data.paths = {}
     data.paths.food = buildFoodPaths(data.position, data)
-    data.paths.tails = buildSnakePaths(data.position, data)
+    // data.paths.tails = buildSnakePaths(data.position, data)
     const result = calculateDirection(data)
 
     return response.json(result)
@@ -91,12 +91,12 @@ function buildFoodPaths(position, data) {
 
 function buildPaths(position, finder, pathWorld, points, type) {
   const paths = []
-
+  const mainGrid = new PF.Grid(pathWorld)
   for (let point of points) {
     // TODO: this is ugly
-    const oldVal = pathWorld[point.x][point.y]
-    pathWorld[point.x][point.y] = 0
-    const grid =  new PF.Grid(pathWorld)
+    // const oldVal = pathWorld[point.x][point.y]
+    // pathWorld[point.x][point.y] = 0
+    const grid = mainGrid.clone()
     let path = []
     try {
       path = finder.findPath(position.x, position.y, point.x, point.y, grid)
@@ -110,7 +110,7 @@ function buildPaths(position, finder, pathWorld, points, type) {
     } else {
       console.log('ignoring pathing from', position.x, position.y, 'to', type, point.x, point.y)
     }
-    pathWorld[point.x][point.y] = oldVal
+    // pathWorld[point.x][point.y] = oldVal
   }
   return paths
 }
