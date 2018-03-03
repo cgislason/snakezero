@@ -313,7 +313,7 @@ function isSafe(point, world) {
 }
 
 function calculateDesirability(data, point, world) {
-  const matchingPaths = data.paths.filter((path) => {
+  const matchingPaths = data.paths.food.filter((path) => {
     if (path.length===0) return false;
     const pathPoint = path[0]
     return pathPoint[0] === point.x && pathPoint[1] === point.y
