@@ -28,7 +28,7 @@ app.post('/start', (request, response) => {
 
   // Response data
   const data = {
-    color: '#E77431',
+    color: '#681A65',
     head_url: 'https://placeimg.com/200/200/nature',
     taunt: "Hello, friends!",
     head_type: "tongue",
@@ -210,34 +210,42 @@ function calculateDirection(data) {
   console.log('snake position:', data.position)
 
   let safestMoves = []
-  let safestDanger = 1
+  let safestDanger = 1000000000
   for(let direction of allDirections) {
     const point = movePoint(data.position, direction)
     const danger = calculateDanger(point, data.world)
+    const desirability = calculateDesirability(data, point, data.world)
+    const p = danger * desirability
+    console.log('danger:\t\t', danger, '\ndesirability\t', desirability)
     let value = undefined
     try {
       value = getDebugValue(point, data.world)
     } catch(e) {}
     console.log('danger?', data.you.id[0], data.position, direction, point, danger, value)
     if (danger < safestDanger) {
+      safestMoves = []
+      safestDanger = danger
+    }
+    if (danger === safestDanger) {
       safestMoves.push({
         move: direction,
         danger,
       })
     }
+  console.log('safestMoves', safestMoves)
   }
 
-  let bestDirection = safestMoves[0] || { move: 'up', danger: 100 }
+  let bestDirection = safestMoves[0] || { move: 'up', danger: 1 }
   if (safestMoves.length > 1) {
     const random = Math.floor(Math.random() * Math.floor(safestMoves.length))
     bestDirection = safestMoves[random]
   }
+  console.log('bestDirection', bestDirection)
   return {
     move: bestDirection.move,
     taunt: `Rollin rollin rollin... ${bestDirection.danger} ${bestDirection.move}`,
   }
 }
-
 function movePoint(point, direction) {
   const change = offsets[direction]
   return {
@@ -275,6 +283,15 @@ function isSafe(point, world) {
   // Empty or food
   const result = world[point.x][point.y].val
   return result === undefined || result === 'f'
+}
+
+function calculateDesirability(data, point, world) {
+  const matchingPaths = data.paths.filter((path) => {
+    if (path.length===0) return false;
+    const pathPoint = path[0]
+    return pathPoint[0] === point.x && pathPoint[1] === point.y
+  })
+  return matchingPaths.length
 }
 
 function calculateDanger(point, world) {
