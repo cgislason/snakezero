@@ -43,9 +43,6 @@ app.post('/move', (request, response) => {
   try {
 
     const data = Object.assign({}, request.body, buildWorld(request.body))
-    data.finder = new PF.AStarFinder({
-      allowDiagonal: false
-    })
     data.pathWorld = buildPathfindingWorld(data.world)
     data.paths = {}
     data.paths.food = buildFoodPaths(data.position, data)
@@ -82,14 +79,14 @@ function buildSnakePaths(position, data) {
   .map((snake) => {
     return snake.body.data[snake.body.data.length - 1]
   })
-  return buildPaths(position, data.finder, data.pathWorld, tails, 'tails')
+  return buildPaths(position, data.pathWorld, tails, 'tails')
 }
 
 function buildFoodPaths(position, data) {
-  return buildPaths(position, data.finder, data.pathWorld, data.food.data, 'food')
+  return buildPaths(position, data.pathWorld, data.food.data, 'food')
 }
 
-function buildPaths(position, finder, pathWorld, points, type) {
+function buildPaths(position, pathWorld, points, type) {
   const paths = []
   const mainGrid = new PF.Grid(pathWorld)
   for (let point of points) {
@@ -97,6 +94,9 @@ function buildPaths(position, finder, pathWorld, points, type) {
     // const oldVal = pathWorld[point.x][point.y]
     // pathWorld[point.x][point.y] = 0
     const grid = mainGrid.clone()
+    const finder = new PF.AStarFinder({
+      allowDiagonal: false
+    })
     let path = []
     try {
       path = finder.findPath(position.x, position.y, point.x, point.y, grid)
@@ -313,9 +313,12 @@ function isSafe(point, world) {
 }
 
 function calculateDesirability(data, point, world) {
+  console.log(data.paths.food.map((path) => {
+    return path[1]
+  }), point)
   const matchingPaths = data.paths.food.filter((path) => {
     if (path.length===0) return false;
-    const pathPoint = path[0]
+    const pathPoint = path[1]
     return pathPoint[0] === point.x && pathPoint[1] === point.y
   })
   return matchingPaths.length
