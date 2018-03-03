@@ -8,6 +8,7 @@ const {
   genericErrorHandler,
   poweredByHandler
 } = require('./handlers.js')
+var PF = require('pathfinding')
 
 // For deployment to Heroku, the port needs to be set using ENV, so
 // we check for the port number in process.env
@@ -40,7 +41,9 @@ app.post('/start', (request, response) => {
 // Handle POST request to '/move'
 app.post('/move', (request, response) => {
   try {
-    const data = Object.assign(request.body ,buildWorld(request.body))
+    const data = Object.assign({}, request.body, buildWorld(request.body))
+    data.pathWorld = new PF.Grid(buildPathfindingWorld(data.world))
+    data.paths = buildPaths(data.position, data)
     const result = calculateDirection(data)
 
     return response.json(result)
@@ -54,7 +57,7 @@ app.post('/move', (request, response) => {
 })
 
 // Handle POST request to '/END'
-app.post('/END', (request, response) => {
+app.post('/end', (request, response) => {
   console.log('game ending', request.body)
   return response.json({})
 })
@@ -67,10 +70,34 @@ app.listen(app.get('port'), () => {
   console.log('Server listening on port %s', app.get('port'))
 })
 
+function buildPaths(position, data) {
+  const finder = new PF.AStarFinder()
+
+  const paths = []
+  for (let foodPoint of data.food.data) {
+    const grid = data.pathWorld.clone()
+    const path = finder.findPath(position.x, position.y, foodPoint.x, foodPoint.y, grid)
+    paths.push(path)
+    console.log('pathing from', position.x, position.y, 'to', foodPoint.x, foodPoint.y)
+    console.log(path)
+  }
+  return paths
+}
+
+function buildPathfindingWorld(world) {
+  let pathWorld = []
+  for(let x = 0; x < world.length; x++) {
+    pathWorld[x] = []
+    for(let y = 0; y < world[x].length; y++) {
+      pathWorld[x][y] = world[x][y].blocked ? 1 : 0
+    }
+  }
+  return pathWorld
+}
+
 
 function buildWorld(data) {
   let world = makeArray(data.width, data.height)
-  // console.log('all data', JSON.stringify(data, null, 2))
 
   const snakeMap = {}
   for(let snake of data.snakes.data) {
@@ -83,7 +110,8 @@ function buildWorld(data) {
       world[point.x][point.y] = {
         val: snake.id[0],
         type: 'snake',
-        id: snake.id
+        id: snake.id,
+        blocked: true,
       }
     }
     // mark potential move spots
@@ -96,6 +124,7 @@ function buildWorld(data) {
     world[food.x][food.y] = {
       type: 'food',
       val:'f',
+      blocked: false,
     }
   }
 
@@ -122,6 +151,7 @@ function markHead(world, snake, ourLength) {
         val: danger ? '!' : '?',
         id: snake.id,
         danger,
+        blocked: danger,
       }
     }
   }
