@@ -80,16 +80,23 @@ function buildWorld(data) {
       break
     }
     for(let point of snake.body.data) {
-      world[point.x][point.y] = snake.id[0]
+      world[point.x][point.y] = {
+        val: snake.id[0],
+        type: 'snake',
+        id: snake.id
+      }
     }
     // mark potential move spots
     if (snake.id !== data.you.id) {
-      world = markHead(world, snake.body.data[0])
+      world = markHead(world, snake, data.you.length)
     }
   }
 
   for(let food of data.food.data) {
-    world[food.x][food.y] = 'f'
+    world[food.x][food.y] = {
+      type: 'food',
+      val:'f',
+    }
   }
 
   const position = data.you.body.data[0]
@@ -101,21 +108,38 @@ function buildWorld(data) {
   }
 }
 
-function markHead(world, head) {
+function markHead(world, snake, ourLength) {
+  const head = snake.body.data[0]
   let newWorld = world
   const points = allDirections.map((dir) => movePoint(head, dir))
   console.log('head points', points)
   for(let p of points) {
     console.log('marking head?', isSafe(p, world), p, getDebugValue(p, world))
     if (isSafe(p, world)) {
-      world[p.x][p.y] = '?'
+      const danger = snake.length >= ourLength
+      world[p.x][p.y] = {
+        type: 'snake_move',
+        val: danger ? '!' : '?',
+        id: snake.id,
+        danger,
+      }
     }
   }
   return world
 }
 
 function makeArray(x, y) {
-  return Array(...Array(x)).map(() => Array(...Array(y)));
+  // const world = Array(...Array(x)).map(() => Array(...Array(y)))
+
+  const world = []
+  for(let i = 0; i < y; i++) {
+    world[i] = []
+    for(let j = 0; j < x; j++) {
+      world[i][j] = {}
+    }
+  }
+
+  return world
 }
 
 function printWorld(world) {
@@ -124,7 +148,7 @@ function printWorld(world) {
     for(let y = 0; y < world.length; y++) {
       let rowStr = `${y} `.padStart(3)
       for(let x = 0; x < world[0].length; x++) {
-        const val = world[x][y]
+        const val = world[x][y].val
         rowStr += val || '-'
         rowStr += ' '
       }
@@ -150,29 +174,35 @@ const defaultMoves = {
 const allDirections = ['up', 'left', 'down', 'right']
 
 function calculateDirection(data) {
-  // Default move is to go circular
-  let move = defaultMoves[data.turn % 4]
-
-  console.log('snake position:', data.position)
   printWorld(data.world)
+  console.log('snake position:', data.position)
 
+  let safestMoves = []
+  let safestDanger = 1
   for(let direction of allDirections) {
-    const testPoint = movePoint(data.position, direction)
-    const safe = isSafe(testPoint, data.world)
+    const point = movePoint(data.position, direction)
+    const danger = calculateDanger(point, data.world)
     let value = undefined
     try {
-      value = getDebugValue(testPoint, data.world)
+      value = getDebugValue(point, data.world)
     } catch(e) {}
-    console.log('safe?', data.you.id[0], data.position, direction, testPoint, safe, value)
-    if (safe) {
-      move = direction
-      break;
+    console.log('danger?', data.you.id[0], data.position, direction, point, danger, value)
+    if (danger < safestDanger) {
+      safestMoves.push({
+        move: direction,
+        danger,
+      })
     }
   }
 
+  let bestDirection = safestMoves[0] || { move: 'up', danger: 100 }
+  if (safestMoves.length > 1) {
+    const random = Math.floor(Math.random() * Math.floor(safestMoves.length))
+    bestDirection = safestMoves[random]
+  }
   return {
-    move,
-    taunt: 'Rollin rollin rollin...',
+    move: bestDirection.move,
+    taunt: `Rollin rollin rollin... ${bestDirection.danger} ${bestDirection.move}`,
   }
 }
 
@@ -198,7 +228,7 @@ function getDebugValue(point, world) {
     return '+x'
   }
 
-  return world[point.x][point.y]
+  return world[point.x][point.y].val
 }
 
 function isOutOfBounds(point, world) {
@@ -211,6 +241,30 @@ function isSafe(point, world) {
   }
 
   // Empty or food
-  const result = world[point.x][point.y]
+  const result = world[point.x][point.y].val
   return result === undefined || result === 'f'
+}
+
+function calculateDanger(point, world) {
+  if (isOutOfBounds(point, world)) {
+    return 1
+  }
+
+  // Empty or food
+  const result = world[point.x][point.y]
+
+  // TODO: what if another snake can move here?
+  if (result.type === 'food') {
+    return 0
+  }
+
+  if (result.type === 'snake') {
+    return 1
+  }
+
+  if (result.type === 'snake_move') {
+    return result.danger ? 0.9 : 0.1
+  }
+
+  return 0
 }
