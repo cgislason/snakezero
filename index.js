@@ -46,10 +46,10 @@ app.post('/move', (request, response) => {
     data.finder = new PF.AStarFinder({
       allowDiagonal: true
     })
-    data.pathWorld = new PF.Grid(buildPathfindingWorld(data.world))
+    data.pathWorld = buildPathfindingWorld(data.world)
     data.paths = {}
     data.paths.food = buildFoodPaths(data.position, data)
-    // data.paths.tails = buildSnakePaths(data.position, data)
+    data.paths.tails = buildSnakePaths(data.position, data)
     const result = calculateDirection(data)
 
     return response.json(result)
@@ -93,13 +93,16 @@ function buildPaths(position, finder, pathWorld, points, type) {
   const paths = []
 
   for (let point of points) {
-    const grid = pathWorld.clone()
+    // TODO: this is ugly
+    const oldVal = pathWorld[point.x][point.y]
+    pathWorld[point.x][point.y] = 0
+    const grid =  new PF.Grid(pathWorld)
     let path = []
     try {
-        path = finder.findPath(position.x, position.y, point.x, point.y, grid)
-      } catch (e) {
-        console.log('pathing exception', e)
-      }
+      path = finder.findPath(position.x, position.y, point.x, point.y, grid)
+    } catch (e) {
+      console.log('pathing exception', e)
+    }
     if (path.length > 0) {
       paths.push(path)
       console.log('pathing from', position.x, position.y, 'to', type, point.x, point.y)
@@ -107,6 +110,7 @@ function buildPaths(position, finder, pathWorld, points, type) {
     } else {
       console.log('ignoring pathing from', position.x, position.y, 'to', type, point.x, point.y)
     }
+    pathWorld[point.x][point.y] = oldVal
   }
   return paths
 }
