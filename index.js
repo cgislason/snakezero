@@ -71,15 +71,19 @@ app.listen(app.get('port'), () => {
 })
 
 function buildPaths(position, data) {
-  const finder = new PF.AStarFinder()
-
   const paths = []
-  for (let foodPoint of data.food.data) {
-    const grid = data.pathWorld.clone()
-    const path = finder.findPath(position.x, position.y, foodPoint.x, foodPoint.y, grid)
-    paths.push(path)
-    console.log('pathing from', position.x, position.y, 'to', foodPoint.x, foodPoint.y)
-    console.log(path)
+  try {
+    const finder = new PF.AStarFinder()
+
+    for (let foodPoint of data.food.data) {
+      const grid = data.pathWorld.clone()
+      const path = finder.findPath(position.x, position.y, foodPoint.x, foodPoint.y, grid)
+      paths.push(path)
+      console.log('pathing from', position.x, position.y, 'to', foodPoint.x, foodPoint.y)
+      console.log(path)
+    }
+  } catch (e) {
+    console.log(e)
   }
   return paths
 }
@@ -158,14 +162,12 @@ function markHead(world, snake, ourLength) {
   return world
 }
 
-function makeArray(x, y) {
-  // const world = Array(...Array(x)).map(() => Array(...Array(y)))
-
+function makeArray(width, height) {
   const world = []
-  for(let i = 0; i < y; i++) {
-    world[i] = []
-    for(let j = 0; j < x; j++) {
-      world[i][j] = {}
+  for(let x = 0; x < width; x++) {
+    world[x] = []
+    for(let y = 0; y < height; y++) {
+      world[x][y] = {}
     }
   }
 
@@ -175,9 +177,9 @@ function makeArray(x, y) {
 function printWorld(world) {
   try {
     console.log('  ' + Array.from(Array(world.length).keys()).map((val) => `${val}`.padStart(2)).join(''))
-    for(let y = 0; y < world.length; y++) {
+    for(let y = 0; y < world[0].length; y++) {
       let rowStr = `${y} `.padStart(3)
-      for(let x = 0; x < world[0].length; x++) {
+      for(let x = 0; x < world.length; x++) {
         const val = world[x][y].val
         rowStr += val || '-'
         rowStr += ' '
