@@ -28,7 +28,7 @@ app.post('/start', (request, response) => {
 
   // Response data
   const data = {
-    color: '#681A65',
+    color: '#111111',
     head_url: 'https://placeimg.com/200/200/nature',
     taunt: "Hello, friends!",
     head_type: "tongue",
@@ -88,16 +88,16 @@ function buildFoodPaths(position, data) {
 
 function buildPaths(position, pathWorld, points, type) {
   const paths = []
-  const mainGrid = new PF.Grid(pathWorld)
   for (let point of points) {
     // TODO: this is ugly
     // const oldVal = pathWorld[point.x][point.y]
     // pathWorld[point.x][point.y] = 0
-    const grid = mainGrid.clone()
-    const finder = new PF.AStarFinder({
+    const grid = new PF.Grid(pathWorld)
+    const finder = new PF.DijkstraFinder({
       allowDiagonal: false
     })
     let path = []
+    console.log('position', position)
     try {
       path = finder.findPath(position.x, position.y, point.x, point.y, grid)
     } catch (e) {
@@ -237,32 +237,32 @@ function calculateDirection(data) {
   console.log('snake position:', data.position)
 
   let safestMoves = []
-  let safestDanger = 1000000000
+  let bestScore = 0
   for(let direction of allDirections) {
     const point = movePoint(data.position, direction)
     const danger = calculateDanger(point, data.world)
     const desirability = calculateDesirability(data, point, data.world)
-    const p = danger * desirability
-    console.log('danger:\t\t', danger, '\ndesirability\t', desirability)
+    const score = (1-danger) * (desirability + 1)
+    console.log('score:\t\t', score, '\ndanger:\t\t', danger, 'safe = (',(1-danger),')', '\ndesirability\t', desirability)
     let value = undefined
     try {
       value = getDebugValue(point, data.world)
     } catch(e) {}
     console.log('danger?', data.you.id[0], data.position, direction, point, danger, value)
-    if (danger < safestDanger) {
+    if (score > bestScore) {
       safestMoves = []
-      safestDanger = danger
+      bestScore = score
     }
-    if (danger === safestDanger) {
+    if (score === bestScore) {
       safestMoves.push({
         move: direction,
-        danger,
+        score,
       })
     }
   console.log('safestMoves', safestMoves)
   }
 
-  let bestDirection = safestMoves[0] || { move: 'up', danger: 1 }
+  let bestDirection = safestMoves[0] || { move: 'up', score: -1 }
   if (safestMoves.length > 1) {
     const random = Math.floor(Math.random() * Math.floor(safestMoves.length))
     bestDirection = safestMoves[random]
@@ -270,7 +270,7 @@ function calculateDirection(data) {
   console.log('bestDirection', bestDirection)
   return {
     move: bestDirection.move,
-    taunt: `Rollin rollin rollin... ${bestDirection.danger} ${bestDirection.move}`,
+    taunt: `Rollin rollin rollin... ${bestDirection.score} ${bestDirection.move}`,
   }
 }
 function movePoint(point, direction) {
@@ -321,7 +321,15 @@ function calculateDesirability(data, point, world) {
     const pathPoint = path[1]
     return pathPoint[0] === point.x && pathPoint[1] === point.y
   })
-  return matchingPaths.length * 1.0
+
+  // const min = 10000
+  // for (path of matchingPaths) {
+  //   if (path.length < min) {
+  //     min = path.length
+  //   }
+  // }
+  // return 10000 - min
+  return matchingPaths.length
 }
 
 function calculateDanger(point, world) {
