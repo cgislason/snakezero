@@ -321,12 +321,12 @@ function calculateDesirability(data, point, world) {
     const pathPoint = path[1]
     return pathPoint[0] === point.x && pathPoint[1] === point.y
   })
-  return matchingPaths.length
+  return matchingPaths.length * 1.0
 }
 
 function calculateDanger(point, world) {
   if (isOutOfBounds(point, world)) {
-    return 1
+    return 1.0
   }
 
   // Empty or food
@@ -334,16 +334,16 @@ function calculateDanger(point, world) {
 
   // TODO: what if another snake can move here?
   if (result.type === 'food') {
-    return 0
+    return 0.0
   }
 
   if (result.type === 'snake') {
-    return 1
+    return 1.0
   }
 
   if (result.type === 'snake_move') {
     return result.danger ? 0.9 : 0.1
   }
 
-  return 0
+  return 0.0
 }
