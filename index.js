@@ -28,7 +28,7 @@ app.post('/start', (request, response) => {
 
   // Response data
   const data = {
-    color: '#111111',
+    color: '#F7F929',
     head_url: 'https://placeimg.com/200/200/nature',
     taunt: "Hello, friends!",
     head_type: "tongue",
